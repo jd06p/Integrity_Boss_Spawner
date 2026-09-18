@@ -12,6 +12,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundClearTitlesPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitlesAnimationPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundStopSoundPacket;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -423,6 +424,21 @@ public class BossSpawnHandler {
     }
 
     /**
+     * Client-side equivalent of the "/stopsound" command with no source or
+     * location arguments: the {@link ClientboundStopSoundPacket} is sent with
+     * both the source AND the sound id null, which makes it stop every sound
+     * currently playing on each client. Used at the start of the boss death
+     * sequence to silence any still-running ambience (e.g. the looping
+     * nullishereloop) before the death sting starts, so everything plays in
+     * the exact requested order: stop first, then integritydies exactly once.
+     */
+    private static void stopSoundToAll(ServerLevel level) {
+        for (ServerPlayer player : level.players()) {
+            player.connection.send(new ClientboundStopSoundPacket((ResourceLocation) null, (SoundSource) null));
+        }
+    }
+
+    /**
      * Starts the continuous {@code nullishereloop} ambience for every present
      * player. Intentionally invoked only once per spawn; the sound's own
      * asset is responsible for looping, and we never re-trigger it on ticks.
@@ -667,15 +683,17 @@ public class BossSpawnHandler {
 
     /**
      * Fires only when the tracked Integrity boss is actually killed (a real
-     * death, never a mere unload, dimension change or removal). Plays the death
-     * sound exactly once and asks every client to run the windowed-mode +
-     * 12-alert fake technical-error sequence.
+     * death, never a mere unload, dimension change or removal). Stops any
+     * currently playing sound (the client-side equivalent of /stopsound, so
+     * the lingering ambience is cut off first), then plays the death sting
+     * exactly once, and asks every client to run the windowed-mode + alert
+     * fake technical-error sequence.
      *
      * <p>The still-live tracked UUID is claimed (nulled) synchronously before
      * any work happens, so no number of re-fired death/handling events can ever
      * start the sequence twice during the same encounter. All window/LWJGL work
      * stays on the client (the packet is handled through DistExecutor); this
-     * handler only sends packets and plays a sound, so the dedicated server
+     * handler only sends packets and plays sounds, so the dedicated server
      * stays safe and the server thread is never blocked.
      */
     @SubscribeEvent
@@ -692,6 +710,9 @@ public class BossSpawnHandler {
         halfHealthTriggered = false;
 
         BossMod.LOGGER.info("[BossMod] Integrity boss defeated; starting death sequence.");
+        // Step 1: stop whatever sound is currently playing on every client.
+        stopSoundToAll(serverLevel);
+        // Step 2: the death sting, played exactly once per death.
         playSoundToAll(serverLevel, createDeathSound(), 3.0f, 1.0f);
         notifyClients(serverLevel, IntegrityFxPacket.KIND_DEATH);
     }
