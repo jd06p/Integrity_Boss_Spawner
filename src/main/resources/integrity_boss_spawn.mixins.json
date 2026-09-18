@@ -1,0 +1,15 @@
+{
+    "required": true,
+    "minVersion": "0.8.5",
+    "package": "com.bossmod.mixin",
+    "compatibilityLevel": "JAVA_17",
+    "refmap": "integrity_boss_spawn.refmap.json",
+    "mixins": [
+        "MixinRespawnInterceptor"
+    ],
+    "server": [],
+    "client": [],
+    "injectors": {
+        "defaultRequire": 1
+    }
+}

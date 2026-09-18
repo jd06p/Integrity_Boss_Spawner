@@ -1,0 +1,14 @@
+{
+  "mappings": {
+    "com/bossmod/mixin/MixinRespawnInterceptor": {
+      "handleClientCommand": "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;m_6272_(Lnet/minecraft/network/protocol/game/ServerboundClientCommandPacket;)V"
+    }
+  },
+  "data": {
+    "searge": {
+      "com/bossmod/mixin/MixinRespawnInterceptor": {
+        "handleClientCommand": "Lnet/minecraft/server/network/ServerGamePacketListenerImpl;m_6272_(Lnet/minecraft/network/protocol/game/ServerboundClientCommandPacket;)V"
+      }
+    }
+  }
+}
